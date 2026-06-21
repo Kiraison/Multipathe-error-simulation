@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNSS Professional Suite - Rotating Satellites</title>
+    <style>
+        /* ==============================================
+           VIBRANT COLOR SYSTEM
+           ============================================== */
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --border-color: #2a3a5a;
+            --text-primary: #e8edf5;
+            --text-secondary: #8899bb;
+            --text-muted: #5a6a8a;
+            
+            /* Environment Colors */
+            --rural-color: #4caf50;
+            --rural-glow: rgba(76, 175, 80, 0.3);
+            --suburban-color: #ff9800;
+            --suburban-glow: rgba(255, 152, 0, 0.3);
+            --urban-color: #f44336;
+            --urban-glow: rgba(244, 67, 54, 0.3);
+            --coastal-color: #2196f3;
+            --coastal-glow: rgba(33, 150, 243, 0.3);
+            
+            /* Accent Colors */
+            --accent-blue: #4facfe;
+            --accent-cyan: #00f5ff;
+            --accent-green: #00ff88;
+            --accent-gold: #ffd700;
+            --accent-orange: #ff8c42;
+            --accent-red: #ff4757;
+            --accent-purple: #a855f7;
+            --accent-pink: #f472b6;
+            
+            --gradient-main: linear-gradient(135deg, #4facfe 0%, #00f5ff 50%, #00ff88 100%);
+            --shadow-glow: 0 0 30px rgba(79, 172, 254, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ==============================================
+           ANIMATED BACKGROUND
+           ============================================== */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(79, 172, 254, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 245, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(0, 255, 136, 0.03) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-grid::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(79, 172, 254, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(79, 172, 254, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* ==============================================
+           HEADER
+           ============================================== */
+        .header {
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(135deg, #0a0e1a 0%, #111827 50%, #1a2332 100%);
+            padding: 18px 40px;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 2em;
+            filter: drop-shadow(0 0 10px rgba(79, 172, 254, 0.3));
+        }
+
+        .header h1 {
+            font-size: 1.4em;
+            font-weight: 700;
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 .version {
+            font-size: 0.45em;
+            font-weight: 400;
+            color: var(--text-muted);
+            -webkit-text-fill-color: var(--text-muted);
+            background: none;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.55em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .badge-igs {
+            background: rgba(79, 172, 254, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(79, 172, 254, 0.25);
+        }
+
+        .badge-itu {
+            background: rgba(0, 255, 136, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .badge-rtk {
+            background: rgba(255, 215, 0, 0.12);
+            color: var(--accent-gold);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .badge-orbit {
+            background: rgba(168, 85, 247, 0.12);
+            color: var(--accent-purple);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            margin-right: 6px;
+            animation: pulse-dot 2s infinite;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            50% { opacity: 0.6; box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+        }
+
+        /* ==============================================
+           STATUS BAR
+           ============================================== */
+        .status-bar {
+            position: relative;
+            z-index: 1;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 10px 30px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .status-item .label {
+            color: var(--text-muted);
+        }
+
+        .status-item .value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .status-item .value.online {
+            color: var(--accent-green);
+        }
+
+        .status-item .value.gold {
+            color: var(--accent-gold);
+        }
+
+        .status-item .value.blue {
+            color: var(--accent-blue);
+        }
+
+        .status-item .value.purple {
+            color: var(--accent-purple);
+        }
+
+        /* ==============================================
+           CONTAINER
+           ============================================== */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1600px;
+            margin: 20px auto;
+            padding: 0 20px 20px;
+        }
+
+        /* ==============================================
+           ENVIRONMENT SELECTOR - COLORFUL!
+           ============================================== */
+        .env-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .env-card {
+            flex: 1;
+            min-width: 140px;
+            max-width: 200px;
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 16px 20px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .env-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transition: left 0.6s;
+        }
+
+        .env-card:hover::before {
+            left: 100%;
+        }
+
+        .env-card:hover {
+            transform: translateY(-4px);
+        }
+
+        /* RURAL - Green */
+        .env-card.rural {
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+        .env-card.rural:hover {
+            border-color: var(--rural-color);
+            box-shadow: 0 0 40px var(--rural-glow);
+        }
+        .env-card.rural.active {
+            border-color: var(--rural-color);
+            background: rgba(76, 175, 80, 0.15);
+            box-shadow: 0 0 50px var(--rural-glow);
+        }
+        .env-card.rural.active::after {
+            background: var(--rural-color);
+        }
+        .env-card.rural .env-name { color: var(--rural-color); }
+
+        /* SUBURBAN - Orange/Gold */
+        .env-card.suburban {
+            border-color: rgba(255, 152, 0, 0.3);
+        }
+        .env-card.suburban:hover {
+            border-color: var(--suburban-color);
+            box-shadow: 0 0 40px var(--suburban-glow);
+        }
+        .env-card.suburban.active {
+            border-color: var(--suburban-color);
+            background: rgba(255, 152, 0, 0.15);
+            box-shadow: 0 0 50px var(--suburban-glow);
+        }
+        .env-card.suburban.active::after {
+            background: var(--suburban-color);
+        }
+        .env-card.suburban .env-name { color: var(--suburban-color); }
+
+        /* URBAN - Red */
+        .env-card.urban {
+            border-color: rgba(244, 67, 54, 0.3);
+        }
+        .env-card.urban:hover {
+            border-color: var(--urban-color);
+            box-shadow: 0 0 40px var(--urban-glow);
+        }
+        .env-card.urban.active {
+            border-color: var(--urban-color);
+            background: rgba(244, 67, 54, 0.15);
+            box-shadow: 0 0 50px var(--urban-glow);
+        }
+        .env-card.urban.active::after {
+            background: var(--urban-color);
+        }
+        .env-card.urban .env-name { color: var(--urban-color); }
+
+        /* COASTAL - Blue */
+        .env-card.coastal {
+            border-color: rgba(33, 150, 243, 0.3);
+        }
+        .env-card.coastal:hover {
+            border-color: var(--coastal-color);
+            box-shadow: 0 0 40px var(--coastal-glow);
+        }
+        .env-card.coastal.active {
+            border-color: var(--coastal-color);
+            background: rgba(33, 150, 243, 0.15);
+            box-shadow: 0 0 50px var(--coastal-glow);
+        }
+        .env-card.coastal.active::after {
+            background: var(--coastal-color);
+        }
+        .env-card.coastal .env-name { color: var(--coastal-color); }
+
+        .env-card.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .env-icon {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .env-name {
+            font-size: 0.9em;
+            font-weight: 700;
+        }
+
+        .env-desc {
+            font-size: 0.6em;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ==============================================
+           DASHBOARD GRID
+           ============================================== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 20px;
+        }
+
+        /* ==============================================
+           MAIN PANEL
+           ============================================== */
+        .main-panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .panel-title .highlight {
+            color: var(--accent-blue);
+        }
+
+        /* ==============================================
+           MAP CONTAINER
+           ============================================== */
+        .map-container {
+            position: relative;
+            width: 100%;
+            background: #080e1a;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        #mapCanvas {
+            width: 100%;
+            display: block;
+            cursor: crosshair;
+            height: 400px;
+        }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            display: flex;
+            gap: 12px;
+            font-size: 0.6em;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 6px 14px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            flex-wrap: wrap;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        /* ==============================================
+           CHARTS ROW
+           ============================================== */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .chart-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .chart-container .chart-label {
+            font-size: 0.5em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        #trendCanvas,
+        #skyplotCanvas {
+            width: 100%;
+            height: 80px;
+            display: block;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        /* ==============================================
+           BUTTONS - COLORFUL!
+           ============================================== */
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .btn-update {
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-export {
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-green), #00cc77);
+            border: none;
+            border-radius: 10px;
+            color: #0a0e1a;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+
+        /* ==============================================
+           SIDE PANEL - COLORFUL CARDS
+           ============================================== */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .side-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 16px 18px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+
+        .side-card:hover {
+            border-color: rgba(79, 172, 254, 0.2);
+        }
+
+        .side-card .panel-title {
+            margin-bottom: 10px;
+            font-size: 0.6em;
+        }
+
+        /* ==============================================
+           METRICS - COLORFUL!
+           ============================================== */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .metric-card:nth-child(1) {
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .metric-card:nth-child(2) {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .metric-card:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .metric-value.excellent { color: var(--accent-green); }
+        .metric-value.moderate { color: var(--accent-gold); }
+        .metric-value.poor { color: var(--accent-red); }
+
+        .metric-label {
+            font-size: 0.5em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+
+        /* ==============================================
+           ACCURACY METER - COLORFUL!
+           ============================================== */
+        .accuracy-meter {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .accuracy-meter .meter-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65em;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .meter-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-gold), var(--accent-green));
+        }
+
+        .meter-fill.excellent { background: var(--accent-green); }
+        .meter-fill.moderate { background: var(--accent-gold); }
+        .meter-fill.poor { background: var(--accent-red); }
+
+        .accuracy-status {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.6em;
+            color: var(--text-muted);
+        }
+
+        .accuracy-status .status-text {
+            font-weight: 600;
+        }
+
+        .accuracy-status .status-text.excellent { color: var(--accent-green); }
+        .accuracy-status .status-text.moderate { color: var(--accent-gold); }
+        .accuracy-status .status-text.poor { color: var(--accent-red); }
+
+        /* ==============================================
+           DOP VALUES - COLORFUL!
+           ============================================== */
+        .dop-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .dop-item {
+            text-align: center;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .dop-item:nth-child(1) .dop-value { color: var(--accent-blue); }
+        .dop-item:nth-child(2) .dop-value { color: var(--accent-cyan); }
+        .dop-item:nth-child(3) .dop-value { color: var(--accent-green); }
+        .dop-item:nth-child(4) .dop-value { color: var(--accent-purple); }
+
+        .dop-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .dop-label {
+            font-size: 0.5em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dop-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ==============================================
+           SIGNAL LIST - COLORFUL!
+           ============================================== */
+        .signal-list {
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .signal-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .signal-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .signal-list::-webkit-scrollbar-thumb {
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        .signal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.7em;
+            transition: all 0.2s;
+        }
+
+        .signal-item:hover {
+            background: rgba(79, 172, 254, 0.05);
+        }
+
+        .signal-name {
+            font-weight: 500;
+        }
+
+        .signal-snr {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        .signal-snr.good { color: var(--accent-green); }
+        .signal-snr.moderate { color: var(--accent-gold); }
+        .signal-snr.poor { color: var(--accent-red); }
+
+        /* ==============================================
+           RTK STATUS - COLORFUL!
+           ============================================== */
+        .rtk-status {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.7em;
+        }
+
+        .rtk-status .label {
+            color: var(--text-muted);
+        }
+
+        .rtk-status .value {
+            font-weight: 600;
+        }
+
+        .rtk-fixed { color: var(--accent-green); }
+        .rtk-float { color: var(--accent-gold); }
+        .rtk-code { color: var(--accent-red); }
+
+        /* ==============================================
+           ERROR BREAKDOWN - COLORFUL!
+           ============================================== */
+        .error-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.7em;
+        }
+
+        .error-item .label {
+            color: var(--text-muted);
+        }
+
+        .error-item .value {
+            font-weight: 500;
+        }
+
+        .error-item .value.building { color: var(--accent-orange); }
+        .error-item .value.tree { color: var(--accent-green); }
+        .error-item .value.water { color: var(--accent-cyan); }
+        .error-item .value.base { color: var(--text-muted); }
+
+        /* ==============================================
+           FOOTER
+           ============================================== */
+        .footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 18px;
+            color: var(--text-muted);
+            font-size: 0.6em;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            margin-top: 30px;
+            letter-spacing: 0.5px;
+        }
+
+        .footer .accent {
+            color: var(--accent-blue);
+        }
+
+        .footer .accent-green {
+            color: var(--accent-green);
+        }
+
+        .footer .accent-gold {
+            color: var(--accent-gold);
+        }
+
+        /* ==============================================
+           RESPONSIVE
+           ============================================== */
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .env-card {
+                min-width: 100px;
+                max-width: 150px;
+                padding: 12px 14px;
+            }
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                padding: 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .header h1 {
+                font-size: 1em;
+            }
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+            .dop-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .env-card {
+                min-width: 80px;
+                max-width: 120px;
+                padding: 10px;
+            }
+            .env-icon {
+                font-size: 1.5em;
+            }
+            .env-name {
+                font-size: 0.7em;
+            }
+            .btn-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <span class="logo">🛰️</span>
+            <h1>GNSS Professional Suite <span class="version">v2.1</span></h1>
+            <div class="header-badges">
+                <span class="badge badge-igs">IGS Standards</span>
+                <span class="badge badge-itu">ITU-R Compliant</span>
+                <span class="badge badge-rtk">RTK Ready</span>
+                <span class="badge badge-orbit">Orbiting</span>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;">
+            <span style="font-size:0.75em;color:var(--text-muted);">Status:</span>
+            <span style="font-size:0.8em;font-weight:600;color:var(--accent-green);">
+                <span class="status-dot"></span>ONLINE
+            </span>
+        </div>
+    </header>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+        <div class="status-item"><span class="label">🌐 System:</span> <span class="value online">Operational</span></div>
+        <div class="status-item"><span class="label">📡 Constellations:</span> <span class="value">GPS + GLONASS + Galileo</span></div>
+        <div class="status-item"><span class="label">📊 Satellites:</span> <span class="value blue" id="sat-count">0</span></div>
+        <div class="status-item"><span class="label">🕐 Time:</span> <span class="value" id="timestamp">--:--:--</span></div>
+        <div class="status-item"><span class="label">🔄 Orbit:</span> <span class="value purple" id="orbit-speed">1.0x</span></div>
+    </div>
+
+    <!-- CONTAINER -->
+    <div class="container">
+
+        <!-- ENVIRONMENT SELECTOR - COLORFUL -->
+        <div class="env-selector">
+            <div class="env-card rural" data-env="rural">
+                <span class="env-icon">🌾</span>
+                <div class="env-name">Rural</div>
+                <div class="env-desc">Open field, clear sky</div>
+            </div>
+            <div class="env-card suburban" data-env="suburban">
+                <span class="env-icon">🏘️</span>
+                <div class="env-name">Suburban</div>
+                <div class="env-desc">Scattered buildings</div>
+            </div>
+            <div class="env-card urban active" data-env="urban">
+                <span class="env-icon">🏙️</span>
+                <div class="env-name">Urban</div>
+                <div class="env-desc">Dense buildings</div>
+            </div>
+            <div class="env-card coastal" data-env="coastal">
+                <span class="env-icon">🌊</span>
+                <div class="env-name">Coastal</div>
+                <div class="env-desc">Water reflections</div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="dashboard">
+
+            <!-- LEFT: MAIN PANEL -->
+            <div class="main-panel">
+                <div class="panel-header">
+                    <span class="panel-title">🗺️ <span class="highlight">Environment Map</span> & Signal Visualization</span>
+                    <span style="font-size:0.6em;color:var(--text-muted);">🔄 Satellites orbit slowly</span>
+                </div>
+                <div class="map-container">
+                    <canvas id="mapCanvas" width="700" height="500"></canvas>
+                    <div class="map-overlay">
+                        <span><span class="legend-dot" style="background:#5a6a8a;"></span> Building</span>
+                        <span><span class="legend-dot" style="background:#2d6a2d;"></span> Tree</span>
+                        <span><span class="legend-dot" style="background:#1a4d8c;"></span> Water</span>
+                        <span><span class="legend-dot" style="background:#ff4757;"></span> Receiver</span>
+                        <span><span class="legend-dot" style="background:#ffd700;"></span> Direct</span>
+                        <span><span class="legend-dot" style="background:#ff6b6b;"></span> Multipath</span>
+                        <span style="color:var(--text-muted);">🔄 Click map → move receiver</span>
+                    </div>
+                </div>
+
+                <!-- CHARTS ROW -->
+                <div class="charts-row">
+                    <div class="chart-container">
+                        <div class="chart-label">📈 Error Trend (last 10 updates)</div>
+                        <canvas id="trendCanvas" height="80"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-label">🎯 Skyplot - Rotating Satellite Positions</div>
+                        <canvas id="skyplotCanvas" height="80"></canvas>
+                    </div>
+                </div>
+
+                <!-- RECEIVER CONTROLS -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px;">
+                    <div class="coord-control">
+                        <label>X Position <span id="x-value">0 m</span></label>
+                        <input type="range" id="x-slider" min="-90" max="90" value="0" step="2">
+                    </div>
+                    <div class="coord-control">
+                        <label>Y Position <span id="y-value">0 m</span></label>
+                        <input type="range" id="y-slider" min="-90" max="90" value="0" step="2">
+                    </div>
+                </div>
+
+                <!-- BUTTONS -->
+                <div class="btn-row">
+                    <button class="btn-update" id="update-btn">🔄 Update Simulation</button>
+                    <button class="btn-export" id="export-btn">💾 Export Data</button>
+                </div>
+            </div>
+
+            <!-- RIGHT: SIDE PANEL -->
+            <div class="side-panel">
+
+                <!-- ERROR METRICS -->
+                <div class="side-card">
+                    <div class="panel-title">📊 Error Metrics</div>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="total-error">0.00</div>
+                            <div class="metric-label">Total Error (m)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="multipath-error">0.00</div>
+                            <div class="metric-label">Multipath (m)</div>
+                        </div>
+                    </div>
+
+                    <!-- ACCURACY METER -->
+                    <div class="accuracy-meter">
+                        <div class="meter-label">
+                            <span>🎯 Accuracy</span>
+                            <span id="accuracy-percent">0%</span>
+                        </div>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="accuracy-fill" style="width:0%;"></div>
+                        </div>
+                        <div class="accuracy-status">
+                            <span style="color:var(--accent-red);">Poor</span>
+                            <span class="status-text" id="accuracy-status">Excellent</span>
+                            <span style="color:var(--accent-green);">Excellent</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DOP VALUES -->
+                <div class="side-card">
+                    <div class="panel-title">📐 Dilution of Precision</div>
+                    <div class="dop-grid">
+                        <div class="dop-item"><div class="dop-label">GDOP</div><div class="dop-value" id="gdop">0.0</div></div>
+                        <div class="dop-item"><div class="dop-label">PDOP</div><div class="dop-value" id="pdop">0.0</div></div>
+                        <div class="dop-item"><div class="dop-label">HDOP</div><div class="dop-value" id="hdop">0.0</div></div>
+                        <div class="dop-item"><div class="dop-label">VDOP</div><div class="dop-value" id="vdop">0.0</div></div>
+                    </div>
+                </div>
+
+                <!-- SATELLITE SIGNALS -->
+                <div class="side-card">
+                    <div class="panel-title">🛰️ Satellite Signals</div>
+                    <div class="signal-list" id="signal-list">
+                        <div style="text-align:center;color:var(--text-muted);padding:15px;font-size:0.8em;">Waiting for data...</div>
+                    </div>
+                </div>
+
+                <!-- RTK STATUS -->
+                <div class="side-card">
+                    <div class="panel-title">🎯 RTK Solution</div>
+                    <div id="rtk-status">
+                        <div class="rtk-status"><span class="label">Type</span><span class="value rtk-fixed" id="rtk-type">--</span></div>
+                        <div class="rtk-status"><span class="label">Horizontal</span><span class="value" id="rtk-horizontal">-- cm</span></div>
+                        <div class="rtk-status"><span class="label">Vertical</span><span class="value" id="rtk-vertical">-- cm</span></div>
+                        <div class="rtk-status"><span class="label">Success</span><span class="value" id="rtk-success">--%</span></div>
+                    </div>
+                </div>
+
+                <!-- ERROR BREAKDOWN -->
+                <div class="side-card">
+                    <div class="panel-title">⚠️ Error Breakdown</div>
+                    <div id="error-breakdown">
+                        <div class="error-item"><span class="label">🏢 Buildings</span><span class="value building" id="building-error">0.00 m</span></div>
+                        <div class="error-item"><span class="label">🌳 Trees</span><span class="value tree" id="tree-error">0.00 m</span></div>
+                        <div class="error-item"><span class="label">💧 Water</span><span class="value water" id="water-error">0.00 m</span></div>
+                        <div class="error-item"><span class="label">📡 Base Error</span><span class="value base" id="base-error">0.00 m</span></div>
+                        <div class="error-item"><span class="label">📊 Signal Quality</span><span class="value" id="signal-quality">0%</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        GNSS Professional Suite v2.1 | <span class="accent">IGS Standards</span> Compliant | <span class="accent-green">ITU-R</span> P.527 • P.833-9 • P.526 | <span class="accent-gold">RTK</span> Ready | Satellites Rotating Slowly
+    </div>
+
+    <!-- ==============================================
+               JAVASCRIPT
+               ============================================== -->
+    <script>
+        // ==============================================
+        // STATE
+        // ==============================================
+        let currentEnv = 'urban';
+        let currentX = 0;
+        let currentY = 0;
+        let errorHistory = [];
+        let orbitTime = 0;
+        const ORBIT_SPEED = 0.3;
+
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const trendCanvas = document.getElementById('trendCanvas');
+        const trendCtx = trendCanvas.getContext('2d');
+        const skyplotCanvas = document.getElementById('skyplotCanvas');
+        const skyCtx = skyplotCanvas.getContext('2d');
+
+        // ==============================================
+        // SATELLITE ORBITS
+        // ==============================================
+        const SATELLITE_ORBITS = [
+            { name: 'GPS01', baseAngle: 0, radius: 110, elevation: 75, color: '#4facfe' },
+            { name: 'GPS02', baseAngle: 45, radius: 110, elevation: 80, color: '#00f5ff' },
+            { name: 'GPS03', baseAngle: 90, radius: 110, elevation: 70, color: '#00ff88' },
+            { name: 'GPS04', baseAngle: 135, radius: 110, elevation: 85, color: '#ffd700' },
+            { name: 'GPS05', baseAngle: 180, radius: 110, elevation: 65, color: '#ff8c42' },
+            { name: 'GPS06', baseAngle: 225, radius: 110, elevation: 78, color: '#a855f7' },
+            { name: 'GPS07', baseAngle: 270, radius: 110, elevation: 72, color: '#f472b6' },
+            { name: 'GPS08', baseAngle: 315, radius: 110, elevation: 82, color: '#34d399' },
+            { name: 'GLO01', baseAngle: 22.5, radius: 95, elevation: 68, color: '#f97316' },
+            { name: 'GLO02', baseAngle: 67.5, radius: 95, elevation: 74, color: '#22d3ee' },
+            { name: 'GLO03', baseAngle: 112.5, radius: 95, elevation: 79, color: '#818cf8' },
+            { name: 'GLO04', baseAngle: 157.5, radius: 95, elevation: 66, color: '#fb7185' },
+            { name: 'GAL01', baseAngle: 37.5, radius: 100, elevation: 73, color: '#fbbf24' },
+            { name: 'GAL02', baseAngle: 82.5, radius: 100, elevation: 69, color: '#60a5fa' },
+            { name: 'GAL03', baseAngle: 127.5, radius: 100, elevation: 76, color: '#f472b6' },
+            { name: 'GAL04', baseAngle: 172.5, radius: 100, elevation: 81, color: '#34d399' }
+        ];
+
+        // ==============================================
+        // ENVIRONMENTS
+        // ==============================================
+        const ENVIRONMENTS = {
+            rural: {
+                buildings: [],
+                trees: [{ x: -25, y: -15, radius: 12 }, { x: 20, y: 10, radius: 10 }],
+                water: []
+            },
+            suburban: {
+                buildings: [{ x: -40, y: -25, width: 28, height: 8 }, { x: 35, y: -15, width: 24, height: 7 }, { x: -20,
+                        y: 30, width: 26, height: 6 }],
+                trees: [{ x: -55, y: 15, radius: 10 }, { x: 50, y: 20, radius: 9 }],
+                water: [{ x: 0, y: -50, radius: 14 }]
+            },
+            urban: {
+                buildings: [{ x: -50, y: -30, width: 38, height: 30 }, { x: 30, y: -20, width: 35, height: 28 },
+                { x: -20, y: 40, width: 48, height: 35 }, { x: 0, y: -60, width: 30, height: 25 },
+                { x: 45, y: 30, width: 28, height: 22 }, { x: -45, y: 20, width: 32, height: 20 }],
+                trees: [{ x: -65, y: -45, radius: 7 }, { x: 60, y: -35, radius: 6 }],
+                water: []
+            },
+            coastal: {
+                buildings: [{ x: -45, y: -25, width: 30, height: 15 }],
+                trees: [{ x: -30, y: -20, radius: 8 }],
+                water: [{ x: 20, y: 30, radius: 35 }, { x: -10, y: -40, radius: 25 }]
+            }
+        };
+
+        // ==============================================
+        // DRAWING FUNCTIONS
+        // ==============================================
+        function worldToCanvas(x, y, w, h) {
+            return { x: ((x + 100) / 200) * w, y: ((100 - y) / 200) * h };
+        }
+
+        function canvasToWorld(x, y, w, h) {
+            return { x: (x / w) * 200 - 100, y: 100 - (y / h) * 200 };
+        }
+
+        function getSatellitePositions(time) {
+            return SATELLITE_ORBITS.map(sat => {
+                const angle = sat.baseAngle + time * ORBIT_SPEED;
+                const rad = angle * Math.PI / 180;
+                return {
+                    ...sat,
+                    currentAngle: angle,
+                    x: sat.radius * Math.cos(rad),
+                    y: sat.radius * Math.sin(rad)
+                };
+            });
+        }
+
+        function drawMap(envData, rx, ry, time) {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.fillStyle = '#080e1a';
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(79,172,254,0.04)';
+            ctx.lineWidth = 1;
+            for (let i = -100; i <= 100; i += 20) {
+                const p1 = worldToCanvas(i, -100, w, h);
+                const p2 = worldToCanvas(i, 100, w, h);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+                const p3 = worldToCanvas(-100, i, w, h);
+                const p4 = worldToCanvas(100, i, w, h);
+                ctx.beginPath();
+                ctx.moveTo(p3.x, p3.y);
+                ctx.lineTo(p4.x, p4.y);
+                ctx.stroke();
+            }
+
+            // Buildings
+            envData.buildings.forEach(b => {
+                const center = worldToCanvas(b.x, b.y, w, h);
+                const half = b.width / 2;
+                const tl = worldToCanvas(b.x - half, b.y + half, w, h);
+                const br = worldToCanvas(b.x + half, b.y - half, w, h);
+                const radius = (b.width / 200) * w;
+                const grad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
+                grad.addColorStop(0, 'rgba(255,71,87,0.12)');
+                grad.addColorStop(1, 'rgba(255,71,87,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2a3a5a';
+                ctx.fillRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+                ctx.strokeStyle = '#4a5a7a';
+                ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+                ctx.fillStyle = '#8899bb';
+                ctx.font = '16px Arial';
+                ctx.fillText('🏢', center.x - 7, center.y + 5);
+            });
+
+            // Trees
+            envData.trees.forEach(t => {
+                const center = worldToCanvas(t.x, t.y, w, h);
+                const radius = (t.radius / 200) * w;
+                ctx.fillStyle = '#1a3a1a';
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2d6a2d';
+                ctx.font = '14px Arial';
+                ctx.fillText('🌳', center.x - 5, center.y + 4);
+            });
+
+            // Water
+            envData.water.forEach(wtr => {
+                const center = worldToCanvas(wtr.x, wtr.y, w, h);
+                const radius = (wtr.radius / 200) * w;
+                const grad = ctx.createRadialGradient(center.x - radius * 0.3, center.y - radius * 0.3, 0, center.x,
+                    center.y, radius);
+                grad.addColorStop(0, '#1a4d8c');
+                grad.addColorStop(1, '#0a2a5a');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#4a90d9';
+                ctx.font = '16px Arial';
+                ctx.fillText('💧', center.x - 5, center.y + 5);
+            });
+
+            // ROTATING SATELLITES
+            const receiver = worldToCanvas(rx, ry, w, h);
+            const satellites = getSatellitePositions(time);
+
+            satellites.forEach((sat) => {
+                const satPos = worldToCanvas(sat.x, sat.y, w, h);
+
+                let blocked = false;
+                for (let b of envData.buildings) {
+                    const dist = Math.hypot(rx - b.x, ry - b.y);
+                    if (dist < b.width) { blocked = true; break; }
+                }
+
+                // Signal ray
+                ctx.beginPath();
+                ctx.moveTo(satPos.x, satPos.y);
+                ctx.lineTo(receiver.x, receiver.y);
+
+                if (blocked) {
+                    ctx.strokeStyle = 'rgba(255,71,87,0.35)';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 4]);
+                } else {
+                    ctx.strokeStyle = 'rgba(255,215,0,0.35)';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([]);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Satellite
+                ctx.shadowColor = sat.color;
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = sat.color;
+                ctx.font = '14px Arial';
+                ctx.fillText('🛰️', satPos.x - 6, satPos.y + 4);
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#5a6a8a';
+                ctx.font = '7px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(sat.name, satPos.x, satPos.y - 10);
+            });
+
+            // Receiver
+            const grad = ctx.createRadialGradient(receiver.x, receiver.y, 0, receiver.x, receiver.y, 20);
+            grad.addColorStop(0, 'rgba(255,71,87,0.8)');
+            grad.addColorStop(1, 'rgba(255,71,87,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(receiver.x, receiver.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '28px Arial';
+            ctx.fillStyle = '#ff4757';
+            ctx.textAlign = 'center';
+            ctx.fillText('⭐', receiver.x, receiver.y + 10);
+
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Rover (${rx}, ${ry})`, receiver.x + 15, receiver.y - 3);
+
+            // Orbit info
+            ctx.fillStyle = '#3a4a6a';
+            ctx.font = '8px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Orbit: ${(time * ORBIT_SPEED % 360).toFixed(1)}°`, 10, 20);
+        }
+
+        // ==============================================
+        // TREND CHART
+        // ==============================================
+        function drawTrendChart() {
+            const w = trendCanvas.width;
+            const h = trendCanvas.height;
+            trendCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            trendCtx.fillRect(0, 0, w, h);
+
+            if (errorHistory.length < 2) {
+                trendCtx.fillStyle = '#5a6a8a';
+                trendCtx.font = '10px Arial';
+                trendCtx.textAlign = 'center';
+                trendCtx.fillText('No data yet', w / 2, h / 2 + 4);
+                return;
+            }
+
+            const maxVal = Math.max(10, ...errorHistory);
+            const data = errorHistory.slice(-10);
+
+            trendCtx.strokeStyle = '#4facfe';
+            trendCtx.lineWidth = 2;
+            trendCtx.beginPath();
+
+            data.forEach((val, i) => {
+                const x = (i / (data.length - 1)) * w;
+                const y = h - (val / maxVal) * (h - 10) - 5;
+                if (i === 0) trendCtx.moveTo(x, y);
+                else trendCtx.lineTo(x, y);
+            });
+            trendCtx.stroke();
+
+            trendCtx.lineTo(w, h);
+            trendCtx.lineTo(0, h);
+            trendCtx.closePath();
+            trendCtx.fillStyle = 'rgba(79,172,254,0.1)';
+            trendCtx.fill();
+
+            const latest = data[data.length - 1];
+            trendCtx.fillStyle = '#4facfe';
+            trendCtx.font = '9px Arial';
+            trendCtx.textAlign = 'right';
+            trendCtx.fillText(`${latest.toFixed(2)}m`, w - 5, 15);
+        }
+
+        // ==============================================
+        // SKYPLOT
+        // ==============================================
+        function drawSkyplot(time) {
+            const w = skyplotCanvas.width;
+            const h = skyplotCanvas.height;
+            skyCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            skyCtx.fillRect(0, 0, w, h);
+
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = Math.min(w, h) / 2 - 10;
+
+            skyCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+            skyCtx.lineWidth = 0.5;
+            for (let r = 0.25; r <= 1; r += 0.25) {
+                skyCtx.beginPath();
+                skyCtx.arc(cx, cy, radius * r, 0, Math.PI * 2);
+                skyCtx.stroke();
+            }
+
+            skyCtx.fillStyle = '#3a4a6a';
+            skyCtx.font = '7px Arial';
+            skyCtx.textAlign = 'center';
+            skyCtx.fillText('N', cx, cy - radius - 5);
+            skyCtx.fillText('S', cx, cy + radius + 12);
+            skyCtx.fillText('E', cx + radius + 5, cy + 3);
+            skyCtx.fillText('W', cx - radius - 5, cy + 3);
+
+            const satellites = getSatellitePositions(time);
+            satellites.forEach((sat) => {
+                const angle = sat.currentAngle * Math.PI / 180 - Math.PI / 2;
+                const elev = Math.min(1, sat.elevation / 90);
+                const dist = radius * elev * 0.8 + 5;
+
+                const x = cx + dist * Math.cos(angle);
+                const y = cy + dist * Math.sin(angle);
+
+                skyCtx.beginPath();
+                skyCtx.arc(x, y, 3, 0, Math.PI * 2);
+                skyCtx.fillStyle = sat.color;
+                skyCtx.fill();
+
+                skyCtx.fillStyle = '#5a6a8a';
+                skyCtx.font = '5px Arial';
+                skyCtx.textAlign = 'center';
+                skyCtx.fillText(sat.name, x, y + 10);
+            });
+
+            skyCtx.fillStyle = '#3a4a6a';
+            skyCtx.font = '6px Arial';
+            skyCtx.textAlign = 'center';
+            skyCtx.fillText('▲ Zenith', cx, cy + 3);
+        }
+
+        // ==============================================
+        // ANIMATION
+        // ==============================================
+        function animate() {
+            orbitTime += 1;
+            const env = ENVIRONMENTS[currentEnv];
+            drawMap(env, currentX, currentY, orbitTime);
+            drawSkyplot(orbitTime);
+            drawTrendChart();
+            requestAnimationFrame(animate);
+        }
+
+        // ==============================================
+        // UPDATE ACCURACY METER
+        // ==============================================
+        function updateAccuracy(error) {
+            const accuracyPercent = Math.max(0, Math.min(100, 100 - (error / 15) * 100));
+            const fill = document.getElementById('accuracy-fill');
+            const percent = document.getElementById('accuracy-percent');
+            const status = document.getElementById('accuracy-status');
+
+            fill.style.width = `${accuracyPercent}%`;
+            percent.textContent = `${Math.round(accuracyPercent)}%`;
+
+            if (accuracyPercent > 80) {
+                fill.className = 'meter-fill excellent';
+                status.textContent = '🌟 Excellent';
+                status.className = 'status-text excellent';
+            } else if (accuracyPercent > 50) {
+                fill.className = 'meter-fill moderate';
+                status.textContent = '⚠️ Moderate';
+                status.className = 'status-text moderate';
+            } else {
+                fill.className = 'meter-fill poor';
+                status.textContent = '❌ Poor';
+                status.className = 'status-text poor';
+            }
+        }
+
+        // ==============================================
+        // API CALLS
+        // ==============================================
+        async function updateSimulation() {
+            try {
+                const response = await fetch('/api/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x: currentX, y: currentY, environment: currentEnv })
+                });
+                const data = await response.json();
+
+                const totalEl = document.getElementById('total-error');
+                totalEl.textContent = data.total_error;
+                totalEl.className = 'metric-value';
+                if (data.total_error < 1) totalEl.classList.add('excellent');
+                else if (data.total_error < 3) totalEl.classList.add('moderate');
+                else totalEl.classList.add('poor');
+
+                document.getElementById('multipath-error').textContent = data.multipath_error;
+                document.getElementById('gdop').textContent = data.gdop;
+                document.getElementById('pdop').textContent = data.pdop;
+                document.getElementById('hdop').textContent = data.hdop;
+                document.getElementById('vdop').textContent = data.vdop;
+                document.getElementById('sat-count').textContent = data.visible_satellites;
+                document.getElementById('timestamp').textContent = data.timestamp;
+                document.getElementById('orbit-speed').textContent = `${ORBIT_SPEED.toFixed(1)}x`;
+
+                // Update accuracy
+                updateAccuracy(parseFloat(data.total_error));
+
+                errorHistory.push(parseFloat(data.total_error));
+                if (errorHistory.length > 20) errorHistory.shift();
+
+                const signalList = document.getElementById('signal-list');
+                signalList.innerHTML = '';
+                if (data.signal_data && data.signal_data.length > 0) {
+                    data.signal_data.forEach(sat => {
+                        const cls = sat.quality === 'good' ? 'good' : sat.quality === 'moderate' ? 'moderate' :
+                            'poor';
+                        signalList.innerHTML += `
+                                    <div class="signal-item">
+                                        <span class="signal-name">${sat.quality === 'good' ? '🟢' : sat.quality === 'moderate' ? '🟡' : '🔴'} ${sat.name}</span>
+                                        <span class="signal-snr ${cls}">${sat.snr} dB</span>
+                                        <span style="color:#5a6a8a;">${sat.elevation}°</span>
+                                    </div>
+                                `;
+                    });
+                } else {
+                    signalList.innerHTML =
+                        '<div style="text-align:center;color:#5a6a8a;padding:15px;font-size:0.8em;">No signals available</div>';
+                }
+
+                if (data.rtk) {
+                    const rtkType = document.getElementById('rtk-type');
+                    rtkType.textContent = data.rtk.solution_type;
+                    rtkType.className = 'value';
+                    if (data.rtk.solution_type === 'FIXED') rtkType.classList.add('rtk-fixed');
+                    else if (data.rtk.solution_type === 'FLOAT') rtkType.classList.add('rtk-float');
+                    else rtkType.classList.add('rtk-code');
+
+                    document.getElementById('rtk-horizontal').textContent = `${data.rtk.horizontal_error} cm`;
+                    document.getElementById('rtk-vertical').textContent = `${data.rtk.vertical_error} cm`;
+                    document.getElementById('rtk-success').textContent = `${data.rtk.success_rate}%`;
+                }
+
+                document.getElementById('building-error').textContent = `${data.building_error} m`;
+                document.getElementById('tree-error').textContent = `${data.tree_error} m`;
+                document.getElementById('water-error').textContent = `${data.water_error} m`;
+                document.getElementById('base-error').textContent = `${data.base_error} m`;
+                document.getElementById('signal-quality').textContent = `${data.signal_quality}%`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('signal-list').innerHTML =
+                    `<div style="text-align:center;color:#ff4757;padding:15px;">❌ ${error.message}</div>`;
+            }
+        }
+
+        // ==============================================
+        // EXPORT
+        // ==============================================
+        function exportData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                environment: currentEnv,
+                position: { x: currentX, y: currentY },
+                error_history: errorHistory,
+                total_error: document.getElementById('total-error').textContent,
+                multipath: document.getElementById('multipath-error').textContent,
+                accuracy: document.getElementById('accuracy-percent').textContent,
+                dop: {
+                    gdop: document.getElementById('gdop').textContent,
+                    pdop: document.getElementById('pdop').textContent,
+                    hdop: document.getElementById('hdop').textContent,
+                    vdop: document.getElementById('vdop').textContent
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gnss_data_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==============================================
+        // EVENTS
+        // ==============================================
+        document.querySelectorAll('.env-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.env-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                currentEnv = card.dataset.env;
+                updateSimulation();
+            });
+        });
+
+        const xSlider = document.getElementById('x-slider');
+        const ySlider = document.getElementById('y-slider');
+
+        xSlider.addEventListener('input', (e) => {
+            currentX = parseInt(e.target.value);
+            document.getElementById('x-value').textContent = `${currentX} m`;
+            updateSimulation();
+        });
+
+        ySlider.addEventListener('input', (e) => {
+            currentY = parseInt(e.target.value);
+            document.getElementById('y-value').textContent = `${currentY} m`;
+            updateSimulation();
+        });
+
+        document.getElementById('update-btn').addEventListener('click', updateSimulation);
+        document.getElementById('export-btn').addEventListener('click', exportData);
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            const world = canvasToWorld(mx, my, canvas.width, canvas.height);
+            currentX = Math.round(Math.min(90, Math.max(-90, world.x)));
+            currentY = Math.round(Math.min(90, Math.max(-90, world.y)));
+
+            xSlider.value = currentX;
+            ySlider.value = currentY;
+            document.getElementById('x-value').textContent = `${currentX} m`;
+            document.getElementById('y-value').textContent = `${currentY} m`;
+
+            updateSimulation();
+        });
+
+        // ==============================================
+        // INIT
+        // ==============================================
+        canvas.width = 700;
+        canvas.height = 500;
+        trendCanvas.width = trendCanvas.parentElement.clientWidth || 300;
+        trendCanvas.height = 80;
+        skyplotCanvas.width = skyplotCanvas.parentElement.clientWidth || 300;
+        skyplotCanvas.height = 80;
+
+        const env = ENVIRONMENTS[currentEnv];
+        drawMap(env, currentX, currentY, orbitTime);
+        updateSimulation();
+        animate();
+    </script>
+
+</body>
+</html>
